@@ -1,1 +1,53 @@
+const express = require("express");
+const app = express();
+const PORT = process.env.PORT || 10000;
 
+const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function seededRandom(seed) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return () => {
+    hash ^= hash << 13;
+    hash ^= hash >> 17;
+    hash ^= hash << 5;
+    return (hash >>> 0) / 4294967295;
+  };
+}
+
+function generateKeyFromTimestamp(t) {
+  const date = new Date(Number(t));
+  if (isNaN(date)) return null;
+
+  const seed = date.toISOString().split("T")[0];
+  const rand = seededRandom(seed);
+
+  let key = "";
+  for (let i = 0; i < 10; i++) {
+    const index = Math.floor(rand() * CHARSET.length);
+    key += CHARSET[index];
+  }
+
+  return `vonixe-${key}`;
+}
+
+app.get("/", (req, res) => {
+  res.send("Vonixe Key API. Use /checkpoint/android/getkey?t=<timestamp>");
+});
+
+app.get("/checkpoint/android/getkey", (req, res) => {
+  const t = req.query.t;
+  if (!t) return res.status(400).json({ error: "Missing timestamp (t)" });
+
+  const key = generateKeyFromTimestamp(t);
+  if (!key) return res.status(400).json({ error: "Invalid timestamp" });
+
+  res.json({ key });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
