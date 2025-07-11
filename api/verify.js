@@ -1,26 +1,20 @@
+// /api/verify.js
+import crypto from "crypto";
+
 export default function handler(req, res) {
   const { key } = req.query;
 
-  const ip =
-    req.headers["x-forwarded-for"]?.split(",")[0] ||
-    req.socket?.remoteAddress ||
-    "unknown";
+  const now = new Date();
 
-  const userAgent = req.headers["user-agent"] || "unknown";
-  const today = new Date().toISOString().split("T")[0];
-  const seed = `${ip}-${userAgent}-${today}`;
+  const userAgent = req.headers['user-agent'] || "unknown";
 
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
-  }
-
-  const expectedKey = `vonixe-${Math.abs(hash).toString(36).padStart(8, "0")}`;
+  const seed = `${userAgent}-${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}`;
+  const hash = crypto.createHash('sha256').update(seed).digest('hex').slice(0, 8);
+  const expectedKey = `vonixe-${hash}`;
 
   if (key === expectedKey) {
-    res.status(200).json({ valid: true });
+    res.status(200).json({ success: true });
   } else {
-    res.status(200).json({ valid: false });
+    res.status(401).json({ success: false });
   }
 }
