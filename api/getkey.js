@@ -1,16 +1,16 @@
 app.get("/api/getkey", (req, res) => {
-  const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-  const userAgent = req.headers["user-agent"] || "unknown";
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "0.0.0.0";
+  const ua = req.headers["user-agent"] || "unknown";
 
-  const date = new Date().toISOString().split("T")[0];
-  const seed = `${ip}-${userAgent}-${date}`;
-  const rand = seededRandom(seed);
+  const date = new Date();
+  const day = date.toISOString().split("T")[0];
+  const seed = ip + ua + day;
 
-  let key = "";
-  for (let i = 0; i < 10; i++) {
-    const index = Math.floor(rand() * CHARSET.length);
-    key += CHARSET[index];
+  try {
+    const key = generateKey(seed);
+    return res.json({ key });
+  } catch (e) {
+    console.error("Error generating key:", e);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
-
-  res.json({ key: `vonixe-${key}` });
 });
