@@ -1,20 +1,24 @@
 export default function handler(req, res) {
   try {
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "127.0.0.1";
-    const ua = req.headers["user-agent"] || "unknown";
+    const unique = getUserIdentifier(req);
     const today = new Date().toISOString().split("T")[0];
-
-    const seed = `${ip}-${ua}-${today}`;
+    const seed = `${unique}-${today}`;
     const key = generateKey(seed);
 
     res.status(200).json({ key });
-  } catch (error) {
-    console.error("🔥 INTERNAL ERROR:", error);
+  } catch (e) {
+    console.error("Error:", e);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
-const CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789";
+function getUserIdentifier(req) {
+  // Ambil dari IP atau cookie fallback
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || "";
+  const ua = req.headers["user-agent"] || "";
+  const cookie = req.headers["cookie"] || "";
+  return `${ip}|${ua}|${cookie}`;
+}
 
 function generateKey(seed) {
   let hash = 0;
@@ -23,10 +27,11 @@ function generateKey(seed) {
     hash |= 0;
   }
 
+  const charset = "abcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
   for (let i = 0; i < 8; i++) {
-    const rand = Math.abs(Math.sin(hash + i) * 10000) % CHARSET.length;
-    result += CHARSET[Math.floor(rand)];
+    const rand = Math.abs(Math.sin(hash + i) * 10000) % charset.length;
+    result += charset[Math.floor(rand)];
   }
 
   return `vonixe-${result}`;
